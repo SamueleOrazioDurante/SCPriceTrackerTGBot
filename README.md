@@ -20,15 +20,25 @@ A simple Telegram bot created in one evening to track the lowest price of the St
 
 ## Setup
 
-### With Docker
+### With Docker (using pre-built image)
+
+1. Clone or download this repository.
+2. Ensure you have a `.env` file in the root directory with the required variables (see above).
+3. Run the container:
+   ```
+   docker-compose up -d
+   ```
+   This will pull the pre-built image from GitHub Container Registry and start the bot.
+
+### With Docker (build locally)
 
 1. Clone or download this repository.
 2. Ensure you have a `.env` file in the root directory with the required variables (see above).
 3. Build and run the container:
    ```
-   docker-compose up --build
+   docker-compose -f docker-compose-dev.yml up --build
    ```
-   This will build the Docker image and start the bot in a container, mounting the data volume for persistence.
+   This will build the Docker image locally and start the bot in a container, mounting the data volume for persistence.
 
 ### Without Docker
 

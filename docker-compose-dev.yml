@@ -1,6 +1,6 @@
 services:
   bot:
-    image: ghcr.io/samueleoraziodurante/scpricetrackertgbot:latest
+    build: .
     env_file:
       - .env
     volumes:
