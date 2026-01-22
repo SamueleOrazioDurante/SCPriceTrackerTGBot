@@ -1,0 +1,4 @@
+node_modules/
+prices.json
+package-lock.json
+.env
