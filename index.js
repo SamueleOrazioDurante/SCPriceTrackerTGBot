@@ -132,7 +132,7 @@ performScrape();
 bot.command("price", (ctx) => {
   const history = getStoredData();
   if (history.length > 0) {
-    ctx.reply(`Current price: ${history[0].price}`);
+    ctx.reply(`Current price: ${history[0].price} (last checked: ${history[0].date})`);
   } else {
     ctx.reply("No price data available yet.");
   }
