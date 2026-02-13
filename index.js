@@ -42,28 +42,28 @@ const parsePrice = (priceStr) => {
 };
 
 const performScrape = async () => {
-    console.log(
+  console.log(
     `[${new Date().toLocaleString()}] Starting automatic scraping...`,
   );
   let browser;
   try {
-        browser = await puppeteer.launch({ 
+    browser = await puppeteer.launch({
       headless: "new",
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
       args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--disable-web-security',
-        '--disable-features=VizDisplayCompositor',
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding'
-      ]
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--disable-gpu",
+        "--disable-web-security",
+        "--disable-features=VizDisplayCompositor",
+        "--disable-background-timer-throttling",
+        "--disable-backgrounding-occluded-windows",
+        "--disable-renderer-backgrounding",
+      ],
     });
     const page = await browser.newPage();
     await page.setUserAgent(
@@ -117,6 +117,25 @@ const performScrape = async () => {
         JSON.stringify([newEntry, ...history].slice(0, 100), null, 2),
       );
       console.log(`Success: Current price ${result}`);
+
+      // Check for price change and send alerts
+      if (history.length > 0) {
+        const newPrice = parsePrice(result);
+        const prevPrice = parsePrice(history[0].price);
+        if (newPrice !== null && prevPrice !== null && newPrice !== prevPrice) {
+          const changeType = newPrice < prevPrice ? "dropped" : "increased";
+          if (CHAT_ID) {
+            const alertMessage = `Alert: Price ${changeType}! Current: ${result}, Previous: ${history[0].price}`;
+            bot.telegram
+              .sendMessage(CHAT_ID, alertMessage)
+              .catch((err) => console.error("Error sending alert:", err));
+          } else {
+            console.warn(
+              "Warning: CHAT_ID is not defined in environment variables. No alert sent.",
+            );
+          }
+        }
+      }
     }
   } catch (error) {
     console.error("Error during scheduled scraping:", error.message);
@@ -137,7 +156,9 @@ performScrape();
 bot.command("price", (ctx) => {
   const history = getStoredData();
   if (history.length > 0) {
-    ctx.reply(`Current price: ${history[0].price} (last checked: ${history[0].date})`);
+    ctx.reply(
+      `Current price: ${history[0].price} (last checked: ${history[0].date})`,
+    );
   } else {
     ctx.reply("No price data available yet.");
   }
