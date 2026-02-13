@@ -42,12 +42,12 @@ const parsePrice = (priceStr) => {
 };
 
 const performScrape = async () => {
-  console.log(
+    console.log(
     `[${new Date().toLocaleString()}] Starting automatic scraping...`,
   );
   let browser;
   try {
-    browser = await puppeteer.launch({ 
+        browser = await puppeteer.launch({ 
       headless: "new",
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
       args: [
@@ -75,13 +75,34 @@ const performScrape = async () => {
     });
 
     const result = await page.evaluate(() => {
-      const amount = document.querySelector(
+      const priceElements = document.querySelectorAll(
         '[data-cy-id="price_unit__value"]',
-      )?.innerText;
-      const currency = document.querySelector(
+      );
+      const currencyElements = document.querySelectorAll(
         '[data-cy-id="price_unit__currency"]',
-      )?.innerText;
-      return amount && currency ? `${amount} ${currency}` : null;
+      );
+
+      if (priceElements.length === 0) return null;
+
+      const prices = Array.from(priceElements).map((el, index) => {
+        const priceText = el.innerText.trim();
+        const currency = currencyElements[index]?.innerText.trim() || "";
+        const numericPrice = parseFloat(priceText.replace(/[^0-9.]/g, ""));
+        return {
+          amount: priceText,
+          currency: currency,
+          numeric: numericPrice,
+        };
+      });
+
+      const validPrices = prices.filter((p) => !isNaN(p.numeric));
+      if (validPrices.length === 0) return null;
+
+      const minPrice = validPrices.reduce((min, current) =>
+        current.numeric < min.numeric ? current : min,
+      );
+
+      return `${minPrice.amount} ${minPrice.currency}`;
     });
 
     if (result) {
@@ -91,27 +112,11 @@ const performScrape = async () => {
         date: new Date().toLocaleString("it-IT"),
         price: result,
       };
-      const updatedHistory = [newEntry, ...history].slice(0, 100);
-      fs.writeFileSync(DATA_PATH, JSON.stringify(updatedHistory, null, 2));
+      fs.writeFileSync(
+        DATA_PATH,
+        JSON.stringify([newEntry, ...history].slice(0, 100), null, 2),
+      );
       console.log(`Success: Current price ${result}`);
-
-      // Check for price drop and send alerts
-      if (history.length > 0) {
-        const newPrice = parsePrice(result);
-        const prevPrice = parsePrice(history[0].price);
-        if (newPrice !== null && prevPrice !== null && newPrice < prevPrice) {
-          if (CHAT_ID) {
-            const alertMessage = `Alert: Price dropped! Current: ${result}, Previous: ${history[0].price}`;
-            bot.telegram
-              .sendMessage(CHAT_ID, alertMessage)
-              .catch((err) => console.error("Error sending alert:", err));
-          } else {
-            console.warn(
-              "Warning: CHAT_ID is not defined in environment variables. No alert sent.",
-            );
-          }
-        }
-      }
     }
   } catch (error) {
     console.error("Error during scheduled scraping:", error.message);
